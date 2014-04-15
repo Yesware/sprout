@@ -50,3 +50,10 @@ end
 directory "/Users/#{node['current_user']}/Applications" do
   owner node['current_user']
 end
+
+node["homebrew"]["taps"].each do |repo|
+  execute "Tap #{repo} repository" do
+    command "brew tap #{repo}"
+    user node['current_user']
+  end
+end
