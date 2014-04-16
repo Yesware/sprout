@@ -1,9 +1,12 @@
 include_recipe "sprout-osx-base::homebrew"
-include_recipe "pivotal_workstation::increase_shared_memory"
+
+formula_name = "postgresql#{node['postgres']['version']}"
+plist_name = "homebrew.mxcl.postgresql.plist"
+versioned_plist_name = "homebrew.mxcl.#{formula_name}.plist"
 
 run_unless_marker_file_exists("postgres") do
 
-  ["homebrew.mxcl.postgresql.plist", "org.postgresql.postgres.plist" ].each do |plist|
+  [plist_name, "org.postgresql.postgres.plist" ].each do |plist|
     plist_path = File.expand_path(plist, File.join('~', 'Library', 'LaunchAgents'))
     if File.exists?(plist_path)
       log "postgres plist found at #{plist_path}"
@@ -22,10 +25,10 @@ run_unless_marker_file_exists("postgres") do
     recursive true
   end
 
-  brew "postgresql"
+  brew formula_name
 
-  execute "create the database" do
-    command "/usr/local/bin/initdb -U postgres --encoding=utf8 --locale=en_US /usr/local/var/postgres"
+  execute "create the database cluster" do
+    command "/usr/local/bin/initdb --encoding=utf8 --locale=en_US /usr/local/var/postgres"
     user node['current_user']
   end
 
@@ -38,12 +41,12 @@ run_unless_marker_file_exists("postgres") do
 
 
   execute "copy over the plist" do
-    command %'cp /usr/local/Cellar/postgresql/9.*/homebrew.mxcl.postgresql.plist ~/Library/LaunchAgents/'
+    command %'cp /usr/local/Cellar/#{formula_name}/9.*/#{versioned_plist_name} ~/Library/LaunchAgents/#{plist_name}'
     user node['current_user']
   end
 
   execute "start the daemon" do
-    command %'launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist'
+    command %'launchctl load -w ~/Library/LaunchAgents/#{plist_name}'
     user node['current_user']
   end
 
@@ -53,19 +56,21 @@ run_unless_marker_file_exists("postgres") do
     end
   end
 
-  execute "create the database" do
-    command "/usr/local/bin/createdb -U postgres"
+  execute "create the 'postgres' user" do
+    command "/usr/local/bin/createuser --createdb --no-superuser --no-createrole postgres"
     user node['current_user']
+  end
+
+  (node['postgres']['databases'] || ['']).each do |db_name|
+    execute "create the #{db_name} database" do
+      command "/usr/local/bin/createdb -O postgres #{db_name}"
+      user node['current_user']
+    end
   end
   # "initdb /tmp/junk.$$" will fail unless you modify sysctl variables
   # Michael Sofaer says that these are probably the right settings:
   #   kern.sysv.shmall=65535
   #   kern.sysv.shmmax=16777216
-
-  execute "create the postgres '#{node['current_user']}' superuser" do
-    command "/usr/local/bin/createuser -U postgres --superuser #{node['current_user']}"
-    user node['current_user']
-  end
 
   log "Make sure /usr/local/bin comes first in your PATH, else you will invoke the wrong psql and error with '...Domain socket \"/var/pgsql_socket/.s.PGSQL.5432\""
 end
