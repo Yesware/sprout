@@ -1,12 +1,9 @@
 include_recipe "pivotal_workstation::git"
-include_recipe "pivotal_workstation::apple_gcc42"
 
 rvm_git_revision_hash  = version_string_for("rvm")
 
 ::RVM_HOME = "#{node['sprout']['home']}/.rvm"
 ::RVM_COMMAND = "#{::RVM_HOME}/bin/rvm"
-
-sprout_osx_base_bash_it_enable_feature "plugins/rvm"
 
 run_unless_marker_file_exists(marker_version_string_for("rvm")) do
   recursive_directories [RVM_HOME, 'src', 'rvm'] do
@@ -14,14 +11,9 @@ run_unless_marker_file_exists(marker_version_string_for("rvm")) do
     recursive true
   end
 
-  [
-    "curl -Lsf http://github.com/wayneeseguin/rvm/tarball/#{rvm_git_revision_hash} | tar xvz -C#{RVM_HOME}/src/rvm --strip 1",
-    "cd #{RVM_HOME}/src/rvm; ./install",
-    "#{RVM_COMMAND} --version | grep Wayne"
-  ].each do |rvm_cmd|
-    execute rvm_cmd do
-      user node['current_user']
-    end
+  execute 'download and install RVM' do
+    command 'curl -sSL https://get.rvm.io | bash'
+    user node['current_user']
   end
 
   %w{readline autoconf openssl zlib}.each do |rvm_pkg|
@@ -42,4 +34,13 @@ execute "making #{node["rvm"]["default_ruby"]} with rvm the default" do
   not_if { node["rvm"]["default_ruby"].nil? }
   command "#{::RVM_COMMAND} alias create default #{node["rvm"]["default_ruby"]}"
   user node['current_user']
+end
+
+
+node['rvm']['gemsets'].each do |gemset|
+  execute "create #{gemset} gemset for default ruby" do
+    command "#{::RVM_COMMAND} gemset create #{gemset}"
+    user node['current_user']
+    not_if { node["rvm"]["default_ruby"].nil? }
+  end
 end
