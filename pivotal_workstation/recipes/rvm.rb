@@ -12,7 +12,7 @@ run_unless_marker_file_exists(marker_version_string_for("rvm")) do
   end
 
   execute 'download and install RVM' do
-    command 'curl -sSL https://get.rvm.io | bash'
+    command 'curl -sSL https://get.rvm.io | bash -s -- --auto-dotfiles'
     user node['current_user']
   end
 
