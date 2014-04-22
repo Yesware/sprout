@@ -1,9 +1,17 @@
 unless brew_installed? "mongodb"
-  brew "mongodb"
+  brew node['mongodb']['formula'] || "mongodb"
 
   directory "/Users/#{node['current_user']}/Library/LaunchAgents" do
     owner node['current_user']
     action :create
+  end
+
+  ruby_block "disable table scans" do
+    block do
+      conf_file = Chef::Util::FileEdit.new('/usr/local/etc/mongod.conf')
+      conf_file.insert_line_if_no_match(/^notablescan/, 'notablescan = true')
+      conf_file.write_file
+    end
   end
 
   execute "copy mongodb plist to ~/Library/LaunchAgents" do
