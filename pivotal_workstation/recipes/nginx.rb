@@ -1,5 +1,4 @@
 include_recipe "sprout-osx-base::homebrew"
-include_recipe "pivotal_workstation::ssl_certificate"
 
 run_unless_marker_file_exists("nginx") do
 
@@ -40,5 +39,10 @@ end
 
 template "/usr/local/etc/nginx/nginx.conf" do
   source "nginx.conf.erb"
+  cookbook node['nginx_settings']['conf_template_cookbook'] || @cookbook_name.to_s
   owner node['current_user']
+end
+
+execute "reload the configuration" do
+  command "sudo nginx -s reload"
 end
