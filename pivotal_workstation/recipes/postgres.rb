@@ -1,8 +1,6 @@
 include_recipe "sprout-osx-base::homebrew"
 
-formula_name = "postgresql#{node['postgres']['version']}"
 plist_name = "homebrew.mxcl.postgresql.plist"
-versioned_plist_name = "homebrew.mxcl.#{formula_name}.plist"
 
 run_unless_marker_file_exists("postgres") do
 
@@ -25,7 +23,7 @@ run_unless_marker_file_exists("postgres") do
     recursive true
   end
 
-  brew formula_name
+  brew "postgresql"
 
   execute "create the database cluster" do
     command "/usr/local/bin/initdb --encoding=utf8 --locale=en_US /usr/local/var/postgres"
@@ -41,7 +39,7 @@ run_unless_marker_file_exists("postgres") do
 
 
   execute "copy over the plist" do
-    command %'cp /usr/local/Cellar/#{formula_name}/9.*/#{versioned_plist_name} ~/Library/LaunchAgents/#{plist_name}'
+    command %'cp /usr/local/Cellar/postgresql/9.*/#{plist_name} ~/Library/LaunchAgents/#{plist_name}'
     user node['current_user']
   end
 
